@@ -1,64 +1,80 @@
 from .ability_search import search_ability
-from .ability import Ability, Instruction
-from .planning import plan_task_llm_call, convert_plan_to_instructions_llm_call
-from .all_abilities import *
-from .utils import *
+from .agent_core_components.ability import Ability, Instruction
+from .agent_core_components.short_term_memory import ShortTermMemory
+from .all_abilities import reasonAbility
+from .utils.utils import *
 
 class Agent:
-    def __init__(self, name, purpose, multi_step, ability_search_method="llm_call", instructions=[], plan_steps=[], task=""):
+    def __init__(self, agent_type, brain, long_term_memory, planner, name="", purpose="", instructions=[], plan_steps=[], task=""):
         self.name = name
         self.purpose = purpose
-        self.multi_step = multi_step
+        self.agent_type = agent_type
+        self.brain = brain
+        self.short_term_memory = ShortTermMemory()
+        self.long_term_memory = long_term_memory
         self.abilities = []
-        self.ability_search_method = ability_search_method # "llm_call" by default. can be "vector_search" if functions connected to ability do not require args.
+        self.planner = planner
+        self.plan_steps = []
+        self.add_ability(reasonAbility)
 
-        self.add_ability("Reasoning", "Makes an LLM call to figure out an answer.", reason, {"input_text" : ""})
-        self.add_ability("Web Search", "Searches the web using the Brave Search API", web_search, {"search_query" : ""})
 
-
-    def add_ability(self, ability_name, description, func, args):
-        ability = Ability(ability_name, description, func, args)
+    def add_ability(self, ability):
         self.abilities.append(ability)
+
+
+    def add_point_of_contact(point_of_contact):
+        #Add point of contact
+        pass
 
 
     def act(self, task=None, plan_steps=[], instructions=[]):
         if task:
-            # Scenario 1: User provides a task
+            # Scenario 1: User provides a task which needs to be planned
             self.task = task
             
-            if self.multi_step:
-                self.plan_task()
-                self.convert_plan_to_instructions()
-                self.execute_instructions()
+            if self.agent_type == "plan_in_advance":
+                self.plan()
+                return self.act_on_plan()
 
             else:
                 chosen_ability = search_ability(self.abilities, self.task, self.ability_search_method)
                 result = chosen_ability.func(**chosen_ability.args) #execute ability
-                print(f"Performed '{self.task}' using '{chosen_ability.ability_name}' ability. Result: {result}")
+                print(f"""Performed '{self.task}' using '{chosen_ability.ability_name}' ability.
+                      Result: {result}""")
 
 
-        elif plan_steps:
-            # Scenario 2: User provides a plan
+        elif plan_steps or self.plan_steps:
+            # Scenario 2: User provides a plan or calls the plan() method before act()
             # Assume a multi-step agent flow since planning isn't required.
-            self.plan_steps = plan_steps
+            if plan_steps: self.plan_steps = plan_steps
+            self.act_on_plan()
 
-            self.convert_plan_to_instructions()
-            self.execute_instructions()
-
-        elif instructions:
+        '''elif instructions:
             # Scenario 3: User provides direct instructions
             # Assume a multi-step agent flow since planning isn't required.
             self.instructions = instructions
+            self.execute_instructions()'''
 
-            self.execute_instructions()
+
+    def plan(self):
+        self.planner.plan_task(self.abilities)
+        self.plan_steps = self.planner.agent_plan_steps
 
 
-    def plan_task(self):
-        self.plan_steps = plan_task_llm_call(self.task, self.abilities)
-
+    def act_on_plan(self):
+        prev_step = ""
+        for plan_step in self.plan_steps:
+            plan_step = prev_step + plan_step
+            instructions_llm_response = self.planner.convert_plan_step_to_instruction(plan_step, self.abilities)
+            instruction_function = [ability.action for ability in self.abilities if ability.ability_name == instructions_llm_response['ability_name']][0]
+            instruction_arguments = instructions_llm_response['arguments']
+            result = instruction_function(**instruction_arguments)
+            print(f"""Performed '{instruction_function}'.\nResult: {result}""")
+            prev_step = f"""The previous step was:\n{plan_step}\nThe previous step's output was:\n{result}"""
+        return result
 
     def convert_plan_to_instructions(self):
-        instructions_llm_response = convert_plan_to_instructions_llm_call(self.plan_steps, self.abilities)
+        instructions_llm_response = self.planner.convert_plan_to_instructions_llm_call(self.plan_steps, self.abilities)
         print("instructions_llm_response", instructions_llm_response)
         instructions = []    
         for instruction in instructions_llm_response:
@@ -78,4 +94,4 @@ class Agent:
             print(instruction.func, instruction.args)
             # Execute the chosen ability function with arguments
             result = instruction.func(**instruction.args)
-            print(f"Performed '{instruction}'. Result: {result}")
+            print(f"""Performed '{instruction}'.\nResult: {result}""")

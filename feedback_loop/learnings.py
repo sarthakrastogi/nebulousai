@@ -1,0 +1,1 @@
+# The agent is able to store all that it learns about human preferences, domain expertise, and the task, as an object of this class.
