@@ -1,7 +1,7 @@
 .DS_Store
 .env
 utils/__pycache__
-agent_core_components/__pycache__
+core/__pycache__
 examples/__pycache__
 feedback_loop/__pycache__
 __pycache__

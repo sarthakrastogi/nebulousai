@@ -1,9 +1,11 @@
 import wikipedia
 from .utils.llm import llm_call
-from .agent_core_components.ability import Ability
+from .core.ability import Ability
 
 def search_wikipedia(search_term:str):
-    page_summary = wikipedia.summary(search_term)
+    search_results = wikipedia.search(search_term)
+    selected_search_result = search_results[0]
+    page_summary = wikipedia.summary(selected_search_result)
     #page = wikipedia.page(search_term)
     return page_summary #page.content#, , page.links
 
@@ -13,8 +15,6 @@ Use the returned page content, pass it through the reasoning step with a questio
 searchWikipediaAbility = Ability(ability_name="Wikipedia Search",
                                  description=search_wikipedia_ability_description,
                                  action=search_wikipedia)
-
-
 
 reason_ability_description = """Makes an LLM call to figure out an answer.
 Make sure that you include all the relevant context and clearly mention your question and the expected output from the LLM.

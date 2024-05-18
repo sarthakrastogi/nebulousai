@@ -1,6 +1,6 @@
 from .ability_search import search_ability
-from .agent_core_components.ability import Ability, Instruction
-from .agent_core_components.short_term_memory import ShortTermMemory
+from .core.ability import Ability, Instruction
+from .core.short_term_memory import ShortTermMemory
 from .all_abilities import reasonAbility
 from .utils.utils import *
 
@@ -69,7 +69,7 @@ class Agent:
             instruction_function = [ability.action for ability in self.abilities if ability.ability_name == instructions_llm_response['ability_name']][0]
             instruction_arguments = instructions_llm_response['arguments']
             result = instruction_function(**instruction_arguments)
-            print(f"""Performed '{instruction_function}'.\nResult: {result}""")
+            print(f"""Performed '{instruction_function.__name__}'.\nResult: {result}""")
             prev_step = f"""The previous step was:\n{plan_step}\nThe previous step's output was:\n{result}"""
         return result
 
@@ -94,4 +94,4 @@ class Agent:
             print(instruction.func, instruction.args)
             # Execute the chosen ability function with arguments
             result = instruction.func(**instruction.args)
-            print(f"""Performed '{instruction}'.\nResult: {result}""")
+            print(f"""Performed '{instruction.func.__name__}'.\nResult: {result}""")

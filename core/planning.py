@@ -3,26 +3,34 @@ import json
 import inspect
 
 from ..utils.llm import llm_call
-from ..agent_core_components.planning_methods import planning_methods_prompts_map
-
 
 class Planner:
-    def __init__(self, agent_goal, decomposition_method="chain_of_thought", refine_plan=False):
+    def __init__(self, agent_goal, refine_plan=False):
         self.agent_goal = agent_goal
         self.refine_plan = refine_plan
-        self.decomposition_method = decomposition_method
         self.agent_plan_steps = []
 
     #Decomposition into subgoals
-    def decompose_tasks_into_subtasks(self, abilities, decomposition_method):
+    def decompose_tasks_into_subtasks(self, abilities):
                 
         abilities = '\n\n'.join([f"- {ability.ability_name}\n{ability.description}" for ability in abilities])
-        plan_task_system_prompt = f"""
+        chain_of_thought_planning_prompt = f"""
         You are given a task the user wants to accomplish.
         You have the following abilities you can use to complete this task:
-        {abilities}""" + planning_methods_prompts_map[decomposition_method]
+        {abilities}
 
-        messages = [{"role" : "system", "content" : plan_task_system_prompt},
+        Plan out a series of steps that allow you to complete this task. In each step, name the ability to be used, and its input and expected output.
+        Return your response in the below format. Do not add any comments in your response or it will not be parsed correctly!
+
+        Step 1:
+        Function, reason for using this function, input to function, expected output.
+
+        Step 2:
+        Function, reason for using this function, input to function, expected output.
+        """
+        # https://arxiv.org/abs/2201.11903
+
+        messages = [{"role" : "system", "content" : chain_of_thought_planning_prompt},
                     {"role" : "user", "content" : self.agent_goal}]
         
         llm_response_plan = llm_call(messages)
@@ -81,5 +89,20 @@ class Planner:
     
 
     def plan_task(self, abilities):
-        self.decompose_tasks_into_subtasks(abilities=abilities, decomposition_method=self.decomposition_method)
+        self.decompose_tasks_into_subtasks(abilities=abilities)
         if self.refine_plan: self.reflect_upon_and_refine_plan_llm_call()
+
+
+
+
+class TreeOfThoughtPlanner:
+    def __init__(self, agent_goal, refine_plan=False):
+        self.agent_goal = agent_goal
+        self.refine_plan = refine_plan
+        self.agent_plan_steps = []
+
+    def decompose_tasks_into_subtasks(self, abilities):
+        tree_of_thought_prompt = """"""
+        # exploring multiple reasoning possibilities at each step. It first decomposes the problem into multiple thought steps and generates multiple thoughts per step, creating a tree structure. The search process can be BFS (breadth-first search) or DFS (depth-first search) with each state evaluated by a classifier (via a prompt) or majority vote.
+        # https://arxiv.org/abs/2305.10601
+        pass
