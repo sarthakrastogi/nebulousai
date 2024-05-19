@@ -1,6 +1,7 @@
 import re
 import json
 import inspect
+from json import JSONDecodeError
 
 from ..utils.llm import llm_call
 
@@ -11,21 +12,27 @@ class Planner:
         self.agent_plan_steps = []
 
     #Decomposition into subgoals
-    def decompose_tasks_into_subtasks(self, abilities):
+    def decompose_tasks_into_subtasks(self, abilities, brain):
                 
         abilities = '\n\n'.join([f"- {ability.ability_name}\n{ability.description}" for ability in abilities])
         chain_of_thought_planning_prompt = f"""
-        You are given a task the user wants to accomplish.
+        You are given a task the user wants to accomplish. These are the guidelines the user has set for you:
+        {brain.brain_system_prompt}
+
         You have the following abilities you can use to complete this task:
         {abilities}
 
-        Plan out a series of steps that allow you to complete this task. In each step, name the ability to be used, and its input and expected output.
+        Plan out a series of steps that allow you to complete this task. You can plan any number of tasks.
+        In each step, name the ability to be used, and its input and expected output.
         Return your response in the below format. Do not add any comments in your response or it will not be parsed correctly!
 
         Step 1:
         Function, reason for using this function, input to function, expected output.
 
         Step 2:
+        Function, reason for using this function, input to function, expected output.
+
+        Step 3:
         Function, reason for using this function, input to function, expected output.
         """
         # https://arxiv.org/abs/2201.11903
@@ -38,7 +45,7 @@ class Planner:
         self.agent_plan_steps = [step.strip() for step in steps]
 
 
-    def convert_plan_step_to_instruction(self, plan_step, abilities):
+    def convert_plan_step_to_instruction(self, plan_step, abilities, retries=5):
         abilities_definition_str = ""
         for ability in abilities:
             params = inspect.signature(ability.action).parameters.values()
@@ -59,38 +66,38 @@ class Planner:
         """ + """{"ability_name" : "abilityName1",
          "arguments" : {"argument_1_name" : "argument_1_value", "argument_2_name" : "argument_2_value"}
         }"""
-        #"expected_response" : ["expected_response_1"],
-
-        convert_plan_to_instructions_system_prompt = convert_plan_to_instructions_system_prompt.replace("    ", "")
-        #print("convert_plan_to_instructions_system_prompt", convert_plan_to_instructions_system_prompt)
-
-        messages = [{"role" : "system", "content" : convert_plan_to_instructions_system_prompt},
-                    {"role" : "user", "content" : plan_step}]
         
-        instructions_llm_response = llm_call(messages)
-        #print("instructions", instructions)
-        instructions_llm_response = json.loads(instructions_llm_response)
-        print(instructions_llm_response)
-        return instructions_llm_response
+        convert_plan_to_instructions_system_prompt = convert_plan_to_instructions_system_prompt.replace("    ", "")
+        try:
+            messages = [{"role" : "system", "content" : convert_plan_to_instructions_system_prompt},
+                        {"role" : "user", "content" : plan_step}]
+            
+            instructions_llm_response = llm_call(messages)
+            instructions_llm_response_parsed = json.loads(instructions_llm_response)
+        except JSONDecodeError:
+            print(instructions_llm_response)
+            if retries > 0: return self.convert_plan_step_to_instruction(plan_step, abilities, retries-1)
+        return instructions_llm_response_parsed
     
 
     #Reflection and refinement
     def reflect_upon_and_refine_plan_llm_call(plan, abilities):
-
         reflect_upon_and_refine_plan_system_prompt = ""
-
         messages = [{"role" : "system", "content" : reflect_upon_and_refine_plan_system_prompt},
                     {"role" : "user", "content" : plan}]
         
         instructions_llm_response = llm_call(messages)
-        #print("instructions", instructions)
         instructions_llm_response = instructions_llm_response.split("\n")
         return instructions_llm_response
     
 
-    def plan_task(self, abilities):
-        self.decompose_tasks_into_subtasks(abilities=abilities)
+    def plan_task(self, abilities, brain):
+        self.decompose_tasks_into_subtasks(abilities=abilities, brain=brain)
         if self.refine_plan: self.reflect_upon_and_refine_plan_llm_call()
+
+    
+    def from_preplanned_steps(self, plan_steps):
+        self.agent_plan_steps = plan_steps
 
 
 
