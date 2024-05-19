@@ -3,7 +3,6 @@ from .core.ability import Ability, Instruction
 from .core.planning import Planner
 from .core.short_term_memory import ShortTermMemory
 from .all_abilities import reasonAbility, webSearchAbility, getWebpageContentAbility
-from .utils.utils import *
 
 class Agent:
     def __init__(self, brain, long_term_memory, planner=None, name="", purpose="", instructions=[], plan_steps=[], task=""):
