@@ -41,8 +41,8 @@ result = agent.act()
 
 >> {'tool_name': 'Wikipedia Search', 'arguments': {'search_term': 'Barack Obama'}}
 Performed 'search_wikipedia'.
-{'tool_name': 'Reason', 'arguments': {'input_text': 'What hobbies does Barack Obama enjoy?'}}
+>> {'tool_name': 'Reason', 'arguments': {'input_text': 'What hobbies does Barack Obama enjoy?'}}
 Performed 'reason'.
 
-Result: Some of Barack Obama's favorite hobbies include playing basketball, reading, writing, and spending time outdoors. He is also known to be a fan of music and enjoys playing the guitar. Additionally, he has been seen golfing and has a passion for cooking and trying new foods.
+>> Result: Some of Barack Obama's favorite hobbies include playing basketball, reading, writing, and spending time outdoors. He is also known to be a fan of music and enjoys playing the guitar. Additionally, he has been seen golfing and has a passion for cooking and trying new foods.
 ```

@@ -16,6 +16,7 @@ class Agent:
         self.planner = planner
         self.task = task
         self.plan_steps = plan_steps
+        self.verbose = verbose
         self.add_tool(reasonTool)
         self.add_tool(webSearchTool)
         self.add_tool(getWebpageContentTool)
