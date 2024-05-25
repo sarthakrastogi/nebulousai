@@ -1,4 +1,4 @@
-from all_abilities import send_email
+from all_tools import send_email
 
 class PointOfContact:
     def __init__(self, point_of_contact_name, communication_mode, communication_address) -> None:

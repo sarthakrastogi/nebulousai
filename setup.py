@@ -5,7 +5,7 @@ with open("README.MD", "r") as f:
 
 setup(
     name="nebulousai",
-    version="0.1",
+    version="0.1.1",
     packages=find_packages(),
     long_description=readme_content,
     long_description_content_type="text/markdown",
